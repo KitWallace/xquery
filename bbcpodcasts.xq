@@ -27,7 +27,6 @@ declare function local:series-list($series) {
         for $mp3 in $doc//div[@id = "pc-keepnet-episodes"]//li
         let $title := $mp3//h3/string()
         let $url := $mp3//p[@class = "pc-episode-cta"]/a/@href/string()
-        let $fi := count(tokenize($url,"/"))
         let $date := $mp3//p[@class = "pc-episode-date"]/string()
         let $xsdate := date:date-from-string($date) 
         order by $xsdate descending
@@ -35,7 +34,7 @@ declare function local:series-list($series) {
             element podcast {
                 element url { $url },
                 element title { $title },
-                element filename { tokenize($url,"/")[$fi]},
+                element filename { tokenize($url,"/")[last()]},
                 element date { $date },
                 element xsdate { $xsdate }, 
                 element duration {normalize-space($mp3//p[@class = "pc-episode-duration"]/strong)},
