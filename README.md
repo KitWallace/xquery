@@ -1,4 +1,4 @@
 xquery
 ======
 
-varios xquery examples
+various xquery modules and examples
