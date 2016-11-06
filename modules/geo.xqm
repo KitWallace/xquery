@@ -57,7 +57,7 @@ import module namespace math ="http://exist-db.org/xquery/math"  at "org.exist.x
 declare variable $geo:Airy1830 := <geo:Ellipsoid a='6377563.396' b='6356256.910'  />; 	
 declare variable $geo:WGS84 := <geo:Ellipsoid a='6378137.00' b='6356752.3141'/>;
 declare variable $geo:UKOS :=  <geo:Projection F0='0.9996012717'  lat0='49'   long0='-2'   E0='400000' N0='-100000'/>;
-declare variable $geo:compassPoints := ("N","NNE","NE","ENE","E","ESE","SE","SSE","S","SSW","SW","WSW","W","WNW","NW","NNE");
+declare variable $geo:compassPoints := ("N","NNE","NE","ENE","E","ESE","SE","SSE","S","SSW","SW","WSW","W","WNW","NW","NNW");
 
 (:  --------- utility functions - should be in more generic module ?--------------------------- :)
 
@@ -646,7 +646,7 @@ declare function geo:great-circle-distance  ($f, $s as element(geo:LatLong))  {
 };
 
 declare function geo:compass-point($dir) {
-   let $point := xs:integer(($dir + 11.25) div 22.5) + 1
+   let $point := (xs:integer(($dir + 11.25) div 22.5) mod 16 ) + 1
    return $geo:compassPoints[$point]
 };
 
