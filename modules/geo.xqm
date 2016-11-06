@@ -42,7 +42,8 @@
     :  @since November 12 ,2011 - Grid as variable replaces external file, LatLong-to-OS added 
     :  @since January 2015 - minor changes for eXist version 2 
     :  @since January 2015  - math functions converted to use org.exist.xquery.modules.math.MathModule 
-    :  @since January ,2015 - various string conversion functions added
+    :  @since January 2015 - various string conversion functions added
+    :  @since October 2016 - added plain direction and supporting functions
     :  @see  http://www.cems.uwe.ac.uk/xmlwiki/geo/geoTypes.xsd   
     :  @see  http://exist-db.org  
     :  @see  http://www.ordnancesurvey.co.uk/oswebsite/gps/information/coordinatesystemsinfo/guidecontents/index.htm;;Ordnance Survey Guide
@@ -51,11 +52,12 @@
 
 module namespace geo="http://kitwallace.me/geo";
 
-import module namespace mathx ="http://exist-db.org/xquery/math"  at "org.exist.xquery.modules.math.MathModule";
+import module namespace math ="http://exist-db.org/xquery/math"  at "org.exist.xquery.modules.math.MathModule";
 
 declare variable $geo:Airy1830 := <geo:Ellipsoid a='6377563.396' b='6356256.910'  />; 	
 declare variable $geo:WGS84 := <geo:Ellipsoid a='6378137.00' b='6356752.3141'/>;
 declare variable $geo:UKOS :=  <geo:Projection F0='0.9996012717'  lat0='49'   long0='-2'   E0='400000' N0='-100000'/>;
+declare variable $geo:compassPoints := ("N","NNE","NE","ENE","E","ESE","SE","SSE","S","SSW","SW","WSW","W","WNW","NW","NNE");
 
 (:  --------- utility functions - should be in more generic module ?--------------------------- :)
 
@@ -139,6 +141,7 @@ declare function geo:dms-to-decimal($s as xs:string ) as xs:decimal? {
     :  @param $s  decimal seconds
     :  @return decimal degrees
 ~:)
+
 declare function geo:dms-as-decimal($d,$m as xs:integer,$s as xs:double)  as xs:double {
    ( if ($d > 0) then 1 else -1)  * (($s  div 60 + $m ) div 60 + abs($d))
 };
@@ -152,9 +155,9 @@ declare function geo:dms-as-decimal($d,$m as xs:integer,$s as xs:double)  as xs:
 ~:)
 
 declare function geo:decimal-as-dms($dms as xs:double)  as xs:string {
-let $dms := mathx:abs($dms)
-   let $deg := mathx:floor($dms)
-   let $min := mathx:floor(($dms - $deg) * 60)
+let $dms := math:abs($dms)
+   let $deg := math:floor($dms)
+   let $min := math:floor(($dms - $deg) * 60)
    let $sec := ($dms - $deg - $min div  60) * 3600
    return concat($deg, "&#176; ", $min, "&#8242; ",$sec,"&#8243; ")
 };
@@ -165,7 +168,7 @@ let $dms := mathx:abs($dms)
    :  @return    decimal decgrees in radians
 ~:)
 declare function geo:seconds-as-radians($seconds as xs:double) as xs:double {
-   mathx:radians($seconds) div 3600
+   math:radians($seconds) div 3600
 };
 
 (:~
@@ -364,7 +367,7 @@ declare function geo:eccentricity2( $e as element(geo:Ellipsoid) )  as xs:double
     :  @return nu 
 ~:)
 declare function geo:nu($e as element(geo:Ellipsoid) ,$latitude as xs:double )  {
-   $e/@a div (mathx:sqrt(1 - (geo:eccentricity2($e) * (  mathx:power(mathx:sin($latitude),2)))))
+   $e/@a div (math:sqrt(1 - (geo:eccentricity2($e) * (  math:power(math:sin($latitude),2)))))
 };
 
 (:~
@@ -393,8 +396,8 @@ let
     $a := $e/@a,  
     $b := $e/@b,
     $F0 := $pr/@F0, 
-    $lat0 := mathx:radians($pr/@lat0), 
-    $long0 :=mathx:radians($pr/@long0),  
+    $lat0 := math:radians($pr/@lat0), 
+    $long0 :=math:radians($pr/@long0),  
     $N0 := $pr/@N0, 
     $E0 := $pr/@E0,                     
     $N := $en/@northing,
@@ -403,13 +406,13 @@ let
     $n := ($a - $b) div ($a + $b), $n2 := $n*$n, $n3 := $n*$n*$n,
     $lat:= geo:meridonal-arc($lat0, $lat0,$N, 0, $a, $b, $n,$n2,$n3,$N0,$F0),
  
-   $coslat := mathx:cos($lat),
-   $sinlat := mathx:sin($lat), $sin2lat := $sinlat * $sinlat,
-   $nu := $a*$F0 div mathx:sqrt(1 - $e2*$sin2lat),              
-   $rho := $a*$F0*(1 - $e2) div mathx:power(1 - $e2*$sin2lat, 1.5),  
+   $coslat := math:cos($lat),
+   $sinlat := math:sin($lat), $sin2lat := $sinlat * $sinlat,
+   $nu := $a*$F0 div math:sqrt(1 - $e2*$sin2lat),              
+   $rho := $a*$F0*(1 - $e2) div math:power(1 - $e2*$sin2lat, 1.5),  
    $eta2 := $nu div $rho - 1,
 
-   $tanlat := mathx:tan($lat),
+   $tanlat := math:tan($lat),
    $tan2lat := $tanlat*$tanlat, $tan4lat := $tan2lat*$tan2lat, $tan6lat := $tan4lat*$tan2lat,
    $seclat := 1 div $coslat,
    $nu3 := $nu*$nu*$nu, $nu5 := $nu3*$nu*$nu, $nu7 := $nu5*$nu*$nu,
@@ -426,7 +429,7 @@ let
    $long := $long0 + $X*$dE - $XI*$dE3 + $XII*$dE5 - $XIIA*$dE7
 
    return 
-      geo:LatLong(mathx:degrees($lat),mathx:degrees($long))
+      geo:LatLong(math:degrees($lat),math:degrees($long))
 };
 
 (:~
@@ -437,9 +440,9 @@ declare function geo:meridonal-arc($latn, $lat0, $N, $Mn,$a, $b, $n, $n2, $n3, $
  let 
      $lat := ($N - $N0 - $Mn) div ($a*$F0) + $latn,
      $Ma := (1 + $n + (5 div 4)*$n2 + (5 div 4)*$n3) * ($lat - $lat0),
-     $Mb := (3*$n + 3*$n*$n + (21 div 8)*$n3) * mathx:sin($lat - $lat0) * mathx:cos($lat + $lat0),
-     $Mc := ((15 div 8)*$n2 + (15 div 8)*$n3) * mathx:sin(2*($lat - $lat0)) * mathx:cos(2*($lat+$lat0)),
-     $Md := (35 div 24)*$n3 * mathx:sin(3*($lat - $lat0)) * mathx:cos(3*($lat + $lat0)),
+     $Mb := (3*$n + 3*$n*$n + (21 div 8)*$n3) * math:sin($lat - $lat0) * math:cos($lat + $lat0),
+     $Mc := ((15 div 8)*$n2 + (15 div 8)*$n3) * math:sin(2*($lat - $lat0)) * math:cos(2*($lat+$lat0)),
+     $Md := (35 div 24)*$n3 * math:sin(3*($lat - $lat0)) * math:cos(3*($lat + $lat0)),
      $M := $b * $F0 * ($Ma - $Mb + $Mc - $Md)             
  return 
    if ($N - $N0 - $M < 0.00001)
@@ -470,27 +473,27 @@ let
     $F0 := $pr/@F0, 
     $N0 := $pr/@N0, 
     $E0 := $pr/@E0,                     
-    $lat0 := mathx:radians($pr/@lat0), 
-    $long0 :=mathx:radians($pr/@long0),  
-    $lat := mathx:radians($ll/@latitude),
-    $long := mathx:radians($ll/@longitude),
-    $sinlat := mathx:sin($lat), $sin2lat := $sinlat * $sinlat,
-    $coslat := mathx:cos($lat), $cos2lat := $coslat * $coslat, $cos3lat := $cos2lat * $coslat ,  $cos5lat := $cos3lat * $cos2lat ,
-    $tanlat := mathx:tan($lat), $tan2lat := $tanlat * $tanlat, $tan4lat := $tan2lat * $tan2lat,
+    $lat0 := math:radians($pr/@lat0), 
+    $long0 :=math:radians($pr/@long0),  
+    $lat := math:radians($ll/@latitude),
+    $long := math:radians($ll/@longitude),
+    $sinlat := math:sin($lat), $sin2lat := $sinlat * $sinlat,
+    $coslat := math:cos($lat), $cos2lat := $coslat * $coslat, $cos3lat := $cos2lat * $coslat ,  $cos5lat := $cos3lat * $cos2lat ,
+    $tanlat := math:tan($lat), $tan2lat := $tanlat * $tanlat, $tan4lat := $tan2lat * $tan2lat,
     $latd := $lat - $lat0,  $lats := $lat + $lat0,
     $longd := $long - $long0, $longd2 := $longd * $longd, $longd3 := $longd2 * $longd, $longd4 := $longd3 * $longd, $longd5 := $longd4 * $longd, $longd6 := $longd5 * $longd,
 
     $e2 := geo:eccentricity2($e),                          
     $n := ($a - $b) div ($a + $b), $n2 := $n*$n, $n3 := $n2*$n,
-    $nu := $a*$F0 div mathx:sqrt(1 - $e2*$sin2lat),  $nu2 := $nu * $nu,            
-    $rho := $a*$F0*(1 - $e2) div mathx:power(1 - $e2*$sin2lat, 1.5),  
+    $nu := $a*$F0 div math:sqrt(1 - $e2*$sin2lat),  $nu2 := $nu * $nu,            
+    $rho := $a*$F0*(1 - $e2) div math:power(1 - $e2*$sin2lat, 1.5),  
     $eta2 := $nu div $rho - 1,
     
     $M := $b * $F0 * (
                   (1 + $n + 1.25 * $n2 + 1.25 * $n3) * $latd 
-               -  (3 * $n + 3 * $n2 + ( 21 div 8 ) * $n3) * mathx:sin($latd) * mathx:cos($lats)
-              + ( (15 div 8) * ($n2 +$n3) * mathx:sin(2 * $latd) * mathx:cos(2 * $lats))
-               - (35 div 24) * $n3 * mathx:sin(3 * $latd) * mathx:cos (3 * $lats)
+               -  (3 * $n + 3 * $n2 + ( 21 div 8 ) * $n3) * math:sin($latd) * math:cos($lats)
+              + ( (15 div 8) * ($n2 +$n3) * math:sin(2 * $latd) * math:cos(2 * $lats))
+               - (35 div 24) * $n3 * math:sin(3 * $latd) * math:cos (3 * $lats)
                ),
      $I := $M + $N0,
     $II :=  $nu * $sinlat * $coslat div 2,
@@ -523,15 +526,15 @@ declare function geo:LatLong-to-Mercator($ll as element(geo:LatLong)) as element
     :  @return   LatLong of $p on the $e Ellipsoid
 ~:)
 declare function geo:LatLong-to-XYZ ($ll as element(geo:LatLong), $e  as element(geo:Ellipsoid)) as element(geo:XYZ) {
-    let  $rlat :=mathx:radians($ll/@latitude)
-    let  $rlong := mathx:radians( $ll/@longitude)
+    let  $rlat :=math:radians($ll/@latitude)
+    let  $rlong := math:radians( $ll/@longitude)
     let $height := ($ll/@height,0)[1]
     let  $nu := geo:nu($e,$rlat)
     return 
           <geo:XYZ
-                x="{($nu + $height)  * mathx:cos($rlat) * mathx:cos($rlong)}" 
-                y="{($nu + $height)  *  mathx:cos($rlat) * mathx:sin($rlong)}" 
-                z="{($nu  * (1 - geo:eccentricity2($e)) +$height) * mathx:sin($rlat)}"
+                x="{($nu + $height)  * math:cos($rlat) * math:cos($rlong)}" 
+                y="{($nu + $height)  *  math:cos($rlat) * math:sin($rlong)}" 
+                z="{($nu  * (1 - geo:eccentricity2($e)) +$height) * math:sin($rlat)}"
            />
 };
 
@@ -556,13 +559,13 @@ declare function geo:transform-XYZ ($p as element(geo:XYZ) ,$t  as element(geo:H
     :  @return   LatLong of $p on the $e Ellipsoid
 ~:)
 declare function geo:XYZ-to-LatLong($p  as element(geo:XYZ), $e as element(geo:Ellipsoid)) as element(geo:LatLong) {
- let $r := mathx:sqrt(mathx:power($p/@x,2) + mathx:power($p/@y,2))
- let $initialLat := mathx:atan2 ($p/@z , $r * (1 - geo:eccentricity2($e))  )
+ let $r := math:sqrt(math:power($p/@x,2) + math:power($p/@y,2))
+ let $initialLat := math:atan2 ($p/@z , $r * (1 - geo:eccentricity2($e))  )
  let $lat := geo:iterate-XYZ-to-Lat($e, $initialLat, $p/@z, $r)
- let $long := mathx:atan2( $p/@y , $p/@x )
- let $height :=  $r div mathx:cos($lat) - geo:nu($e,$lat)
+ let $long := math:atan2( $p/@y , $p/@x )
+ let $height :=  $r div math:cos($lat) - geo:nu($e,$lat)
  return    
-     geo:LatLong( mathx:degrees($lat),mathx:degrees($long), $height )
+     geo:LatLong( math:degrees($lat),math:degrees($long), $height )
  };
 
 (:~
@@ -570,7 +573,7 @@ declare function geo:XYZ-to-LatLong($p  as element(geo:XYZ), $e as element(geo:E
     :  Private function
 ~:)
 declare function geo:iterate-XYZ-to-Lat ($e as element(geo:Ellipsoid), $lat, $z , $r as xs:double) as xs:double {
-    let $newLat := mathx:atan2($z + geo:eccentricity2($e) *  geo:nu($e,$lat) * mathx:sin($lat) ,$r )
+    let $newLat := math:atan2($z + geo:eccentricity2($e) *  geo:nu($e,$lat) * math:sin($lat) ,$r )
     return 
         if (abs($lat - $newLat) > 0.000000001) 
         then geo:iterate-XYZ-to-Lat ($e, $newLat ,$z, $r)
@@ -610,10 +613,10 @@ declare function geo:LatLong-to-OS($ll as element(geo:LatLong)) as element(geo:M
    :  @return   distance in nautical miles 
 ~:)
 declare function geo:plain-distance ($f, $s as element(geo:LatLong))  as xs:double {
-   let $longCorr := mathx:cos(mathx:radians(($f/@latitude +$s/@latitude) div 2))
+   let $longCorr := math:cos(math:radians(($f/@latitude +$s/@latitude) div 2))
    let $dlat :=  ($f/@latitude - $s/@latitude) * 60
    let $dlong := ($f/@longitude - $s/@longitude) * 60 * $longCorr
-   return mathx:sqrt(($dlat * $dlat) + ($dlong * $dlong))
+   return math:sqrt(($dlat * $dlat) + ($dlong * $dlong))
 };
 
 (:~
@@ -624,12 +627,27 @@ declare function geo:plain-distance ($f, $s as element(geo:LatLong))  as xs:doub
 ~:)
 declare function geo:great-circle-distance  ($f, $s as element(geo:LatLong))  {
    let 
-       $flat := mathx:radians($f/@latitude),
-       $slat := mathx:radians($s/@latitude),
-       $dlong :=mathx:radians($f/@longitude) - mathx:radians($s/@longitude),
-       $d := mathx:degrees(mathx:acos(mathx:sin($flat) * mathx:sin($slat) + mathx:cos($flat) * mathx:cos($slat) * mathx:cos ($dlong) ))
+       $flat := math:radians($f/@latitude),
+       $slat := math:radians($s/@latitude),
+       $dlong :=math:radians($f/@longitude) - math:radians($s/@longitude),
+       $d := math:degrees(math:acos(math:sin($flat) * math:sin($slat) + math:cos($flat) * math:cos($slat) * math:cos ($dlong) ))
    return 
        $d *  60
+};
+
+
+(:~  Direction functions ~:)
+ 
+ declare function geo:plain-direction ($s, $f as element(geo:LatLong)) as xs:double {
+   let $longCorr := math:cos(math:radians(($f/@latitude +$s/@latitude) div 2))
+   let $dlat :=  ($f/@latitude - $s/@latitude) * 60
+   let $dlong := ($f/@longitude - $s/@longitude) * 60 * $longCorr
+   return  (450 - math:degrees(math:atan2($dlat,$dlong))) mod 360
+};
+
+declare function geo:compass-point($dir) {
+   let $point := xs:integer(($dir + 11.25) div 22.5) + 1
+   return $geo:compassPoints[$point]
 };
 
 declare variable $geo:grid := 
