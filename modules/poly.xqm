@@ -160,9 +160,10 @@ declare function poly:poly-to-js($polygons) {
 </script>
 };
 
-declare function poly:is-left ($p0,$p1,$p2) {
-    ($p1/@longitude - $p0/@longitude) * ($p2/@latitude - $p0/@latitude) -
-    ($p2/@longitude - $p0/@longitude) * ($p1/@latitude - $p0/@latitude) 
+declare function poly:is-left-of-line($p,$a,$b) {
+(: true if $p is left of the line $a to $b :)
+    ($b/@longitude - $a/@longitude) * ($p/@latitude - $a/@latitude) -
+    ($p/@longitude - $a/@longitude) * ($b/@latitude - $a/@latitude) 
 };
 
 declare function poly:point-in-polygon($point,$polygon)  {
@@ -175,13 +176,13 @@ declare function poly:point-in-polygon($point,$polygon)  {
     return
        if ($p/@latitude <= xs:double($point/@latitude))
        then if ($pn/@latitude > xs:double($point/@latitude))   (: upward crossing :)
-            then if (poly:is-left($p,$pn,$point) > 0) (: p is left of edge :)
+            then if (poly:is-left-of-line($point,$p,$pn) > 0) (: point is left of edge :)
                  then 1
                  else 0
             else 0
             
        else if ($pn/@latitude <= xs:double($point/@latitude)) (: downward crossing :)
-            then  if (poly:is-left($p,$pn,$point) < 0)  (: p is right of edge  :)
+            then  if (poly:is-left-of-line($point,$p,$pn) < 0)  (: point is right of edge  :)
                  then -1
                  else 0
             else 0
