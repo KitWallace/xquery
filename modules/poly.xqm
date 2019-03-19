@@ -2,6 +2,8 @@ module namespace poly = "http://kitwallace.co.uk/lib/poly";
 declare namespace kml = "http://www.opengis.net/kml/2.2";
 import module namespace math ="http://exist-db.org/xquery/math" at "org.exist.xquery.modules.math.MathModule";
 
+(: documentaion and signatures needed :)
+
 declare variable $poly:m-per-Nm := 1852;
 
 declare function poly:point($lat,$long) {
