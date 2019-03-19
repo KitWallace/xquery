@@ -304,7 +304,7 @@ element geo:LatLong {
     :  @param $northing Northing
     :  @return                     Mercator element
 ~:)
-declare function geo:Mercator($easting,$northing as xs:double) as element(geo:Mercator) {
+declare function geo:Mercator($easting,$northing) as element(geo:Mercator) {
  element geo:Mercator {
        attribute easting {$easting},
        attribute northing {$northing}
